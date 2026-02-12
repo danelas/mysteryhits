@@ -15,6 +15,25 @@ const conversations = new Map();
 const MAX_HISTORY = 20; // max messages per conversation to keep context manageable
 
 /**
+ * Strip markdown formatting from text so Instagram/DM responses are clean plain text.
+ */
+function stripMarkdown(text) {
+  return text
+    .replace(/\*\*(.+?)\*\*/g, '$1')   // **bold**
+    .replace(/\*(.+?)\*/g, '$1')       // *italic*
+    .replace(/__(.+?)__/g, '$1')       // __bold__
+    .replace(/_(.+?)_/g, '$1')         // _italic_
+    .replace(/~~(.+?)~~/g, '$1')       // ~~strikethrough~~
+    .replace(/`(.+?)`/g, '$1')         // `code`
+    .replace(/^#{1,6}\s+/gm, '')       // # headings
+    .replace(/^[\-\*]\s+/gm, '')       // - or * list items
+    .replace(/^\d+\.\s+/gm, '')        // 1. numbered lists
+    .replace(/\[(.+?)\]\(.+?\)/g, '$1') // [link](url) -> link
+    .replace(/^>\s+/gm, '')            // > blockquotes
+    .trim();
+}
+
+/**
  * Generate a ChatGPT reply for a given sender.
  * Maintains per-user conversation history for context.
  */
@@ -101,7 +120,8 @@ Every conversation should end with:
 - A single follow-up question
 
 OUTPUT
-Return only the DM response text.`;
+Return only the DM response text.
+Do not use any markdown formatting (no **, no *, no #, no bullet points). Write in plain text only.`;
 
   try {
     const completion = await getClient().chat.completions.create({
@@ -117,10 +137,12 @@ Return only the DM response text.`;
       throw new Error("Empty response from OpenAI");
     }
 
-    // Save assistant reply to history
-    history.push({ role: "assistant", content: assistantMessage });
+    const cleanMessage = stripMarkdown(assistantMessage);
 
-    return assistantMessage;
+    // Save assistant reply to history
+    history.push({ role: "assistant", content: cleanMessage });
+
+    return cleanMessage;
   } catch (err) {
     console.error("OpenAI error:", err.message);
     return "Sorry, I'm having trouble right now. A human agent will get back to you shortly!";
@@ -163,7 +185,8 @@ NEGATIVE COMMENTS
 Example: "I hear you. DM me your order name and I'll look into it."
 
 OUTPUT
-Return only the reply text, no explanations.`;
+Return only the reply text, no explanations.
+Do not use any markdown formatting (no **, no *, no #, no bullet points). Write in plain text only.`;
 
 /**
  * Generate a ChatGPT reply to a public comment.
@@ -183,7 +206,7 @@ async function generateCommentReply(commentText) {
 
     const reply = completion.choices[0]?.message?.content?.trim();
     if (!reply) throw new Error("Empty response from OpenAI");
-    return reply;
+    return stripMarkdown(reply);
   } catch (err) {
     console.error("OpenAI comment error:", err.message);
     return "Thanks for the comment. DM us if you have any questions.";
@@ -259,7 +282,7 @@ async function generateContent(type, prompt) {
 
     const text = completion.choices[0]?.message?.content?.trim();
     if (!text) throw new Error("Empty response from OpenAI");
-    return text;
+    return stripMarkdown(text);
   } catch (err) {
     console.error("OpenAI writer error:", err.message);
     throw err;
