@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mystery Hits Factory — Dashboard</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: { 50: '#faf5ff', 100: '#f3e8ff', 200: '#e9d5ff', 400: '#c084fc', 500: '#a855f7', 600: '#9333ea', 700: '#7e22ce', 800: '#6b21a8', 900: '#581c87' },
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    .toast { animation: slideIn 0.3s ease-out, fadeOut 0.3s ease-in 2.7s forwards; }
+    @keyframes slideIn { from { transform: translateY(-20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+    @keyframes fadeOut { to { opacity: 0; } }
+    .dropzone.dragover { border-color: #a855f7; background: #faf5ff; }
+    .img-card:hover .img-overlay { opacity: 1; }
+    .tab-active { border-color: #a855f7; color: #7e22ce; background: #faf5ff; }
+  </style>
+</head>
+<body class="h-full bg-gray-50 text-gray-800">
+
+<!-- Toast container -->
+<div id="toasts" class="fixed top-4 right-4 z-50 space-y-2"></div>
+
+<!-- Header -->
+<header class="bg-white border-b border-gray-200 shadow-sm">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
+    <div class="flex items-center gap-3">
+      <div class="w-10 h-10 rounded-lg bg-brand-600 flex items-center justify-center">
+        <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
+      </div>
+      <div>
+        <h1 class="text-xl font-bold text-gray-900">Mystery Hits Factory</h1>
+        <p class="text-xs text-gray-500">Instagram Bot Dashboard</p>
+      </div>
+    </div>
+    <div id="status-badge" class="flex items-center gap-2 text-sm">
+      <span class="w-2 h-2 rounded-full bg-green-400 animate-pulse"></span>
+      <span class="text-gray-600">Online</span>
+    </div>
+  </div>
+</header>
+
+<!-- Main content -->
+<main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+
+  <!-- Stats cards -->
+  <div id="stats" class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+    <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
+      <p class="text-xs font-medium text-gray-500 uppercase tracking-wide">Images</p>
+      <p id="stat-images" class="text-2xl font-bold text-gray-900 mt-1">0</p>
+    </div>
+    <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
+      <p class="text-xs font-medium text-gray-500 uppercase tracking-wide">Total Posts</p>
+      <p id="stat-posts" class="text-2xl font-bold text-gray-900 mt-1">0</p>
+    </div>
+    <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
+      <p class="text-xs font-medium text-gray-500 uppercase tracking-wide">Published</p>
+      <p id="stat-published" class="text-2xl font-bold text-green-600 mt-1">0</p>
+    </div>
+    <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
+      <p class="text-xs font-medium text-gray-500 uppercase tracking-wide">Failed</p>
+      <p id="stat-failed" class="text-2xl font-bold text-red-500 mt-1">0</p>
+    </div>
+  </div>
+
+  <!-- Tabs -->
+  <div class="flex gap-1 mb-6 border-b border-gray-200">
+    <button onclick="switchTab('upload')" id="tab-upload" class="px-4 py-2.5 text-sm font-medium border-b-2 rounded-t-lg transition tab-active">Upload & Post</button>
+    <button onclick="switchTab('gallery')" id="tab-gallery" class="px-4 py-2.5 text-sm font-medium border-b-2 border-transparent text-gray-500 rounded-t-lg transition hover:text-gray-700">Image Gallery</button>
+    <button onclick="switchTab('posts')" id="tab-posts" class="px-4 py-2.5 text-sm font-medium border-b-2 border-transparent text-gray-500 rounded-t-lg transition hover:text-gray-700">Post History</button>
+    <button onclick="switchTab('activity')" id="tab-activity" class="px-4 py-2.5 text-sm font-medium border-b-2 border-transparent text-gray-500 rounded-t-lg transition hover:text-gray-700">Activity Log</button>
+  </div>
+
+  <!-- Tab: Upload & Post -->
+  <div id="panel-upload" class="tab-panel">
+    <div class="grid md:grid-cols-2 gap-6">
+
+      <!-- Upload Section -->
+      <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+        <h2 class="text-lg font-semibold mb-4">Upload Image</h2>
+        <div id="dropzone" class="dropzone border-2 border-dashed border-gray-300 rounded-xl p-8 text-center cursor-pointer transition hover:border-brand-400 hover:bg-brand-50">
+          <svg class="mx-auto w-12 h-12 text-gray-400 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+          <p class="text-sm text-gray-600 mb-1">Drag & drop images here, or <span class="text-brand-600 font-medium">browse</span></p>
+          <p class="text-xs text-gray-400">PNG, JPG, WEBP up to 10MB</p>
+          <input id="file-input" type="file" accept="image/*" multiple class="hidden" />
+        </div>
+
+        <!-- Upload progress -->
+        <div id="upload-progress" class="hidden mt-4 space-y-2"></div>
+
+        <!-- Recent uploads -->
+        <div id="recent-uploads" class="mt-4 space-y-2"></div>
+      </div>
+
+      <!-- Post to Instagram Section -->
+      <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+        <h2 class="text-lg font-semibold mb-4">Post to Instagram</h2>
+
+        <!-- Image Selection -->
+        <div class="mb-4">
+          <label class="block text-sm font-medium text-gray-700 mb-1">Select Image</label>
+          <select id="post-image" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-brand-500 focus:border-brand-500">
+            <option value="">-- Choose an uploaded image --</option>
+          </select>
+          <div id="post-image-preview" class="mt-2 hidden">
+            <img id="post-preview-img" class="w-full h-48 object-cover rounded-lg" />
+          </div>
+        </div>
+
+        <!-- Or paste URL -->
+        <div class="mb-4">
+          <label class="block text-sm font-medium text-gray-700 mb-1">Or paste image URL</label>
+          <input id="post-url" type="url" placeholder="https://example.com/photo.jpg" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-brand-500 focus:border-brand-500" />
+        </div>
+
+        <!-- Caption -->
+        <div class="mb-4">
+          <div class="flex items-center justify-between mb-1">
+            <label class="block text-sm font-medium text-gray-700">Caption</label>
+            <button onclick="generateCaption()" id="ai-caption-btn" class="text-xs text-brand-600 hover:text-brand-700 font-medium flex items-center gap-1">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+              AI Generate
+            </button>
+          </div>
+          <textarea id="post-caption" rows="4" placeholder="Write a caption..." class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-brand-500 focus:border-brand-500 resize-none"></textarea>
+        </div>
+
+        <!-- Post button -->
+        <button onclick="publishPost()" id="publish-btn" class="w-full bg-brand-600 text-white rounded-lg px-4 py-2.5 text-sm font-medium hover:bg-brand-700 transition flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg>
+          Publish to Instagram
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tab: Gallery -->
+  <div id="panel-gallery" class="tab-panel hidden">
+    <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-lg font-semibold">Image Gallery</h2>
+        <span id="gallery-count" class="text-sm text-gray-500">0 images</span>
+      </div>
+      <div id="gallery-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+        <div class="text-center text-sm text-gray-400 col-span-full py-12">No images uploaded yet</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tab: Post History -->
+  <div id="panel-posts" class="tab-panel hidden">
+    <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+      <h2 class="text-lg font-semibold mb-4">Post History</h2>
+      <div id="posts-list" class="space-y-3">
+        <div class="text-center text-sm text-gray-400 py-12">No posts yet</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tab: Activity Log -->
+  <div id="panel-activity" class="tab-panel hidden">
+    <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+      <h2 class="text-lg font-semibold mb-4">Activity Log</h2>
+      <div id="activity-list" class="space-y-2">
+        <div class="text-center text-sm text-gray-400 py-12">No activity yet</div>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<script>
+const BASE = window.location.origin;
+
+// ─── Tabs ───────────────────────────────────────────────────────────────────
+function switchTab(name) {
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.add('hidden'));
+  document.querySelectorAll('[id^="tab-"]').forEach(t => {
+    t.classList.remove('tab-active');
+    t.classList.add('border-transparent', 'text-gray-500');
+  });
+  document.getElementById('panel-' + name).classList.remove('hidden');
+  const tab = document.getElementById('tab-' + name);
+  tab.classList.add('tab-active');
+  tab.classList.remove('border-transparent', 'text-gray-500');
+
+  if (name === 'gallery') loadGallery();
+  if (name === 'posts') loadPosts();
+  if (name === 'activity') loadActivity();
+}
+
+// ─── Toast ──────────────────────────────────────────────────────────────────
+function toast(msg, type = 'info') {
+  const colors = { info: 'bg-blue-500', success: 'bg-green-500', error: 'bg-red-500' };
+  const el = document.createElement('div');
+  el.className = `toast ${colors[type] || colors.info} text-white px-4 py-2.5 rounded-lg shadow-lg text-sm font-medium`;
+  el.textContent = msg;
+  document.getElementById('toasts').appendChild(el);
+  setTimeout(() => el.remove(), 3000);
+}
+
+// ─── Stats ──────────────────────────────────────────────────────────────────
+async function loadStats() {
+  try {
+    const r = await fetch(BASE + '/api/stats');
+    const d = await r.json();
+    document.getElementById('stat-images').textContent = d.total_images || 0;
+    document.getElementById('stat-posts').textContent = d.total_posts || 0;
+    document.getElementById('stat-published').textContent = d.published_posts || 0;
+    document.getElementById('stat-failed').textContent = d.failed_posts || 0;
+  } catch(e) { console.error('Stats error:', e); }
+}
+
+// ─── File Upload ────────────────────────────────────────────────────────────
+const dropzone = document.getElementById('dropzone');
+const fileInput = document.getElementById('file-input');
+
+dropzone.addEventListener('click', () => fileInput.click());
+dropzone.addEventListener('dragover', (e) => { e.preventDefault(); dropzone.classList.add('dragover'); });
+dropzone.addEventListener('dragleave', () => dropzone.classList.remove('dragover'));
+dropzone.addEventListener('drop', (e) => {
+  e.preventDefault();
+  dropzone.classList.remove('dragover');
+  handleFiles(e.dataTransfer.files);
+});
+fileInput.addEventListener('change', () => handleFiles(fileInput.files));
+
+async function handleFiles(files) {
+  for (const file of files) {
+    if (!file.type.startsWith('image/')) { toast('Only images allowed', 'error'); continue; }
+    if (file.size > 10 * 1024 * 1024) { toast('File too large (max 10MB)', 'error'); continue; }
+    await uploadFile(file);
+  }
+  fileInput.value = '';
+  loadStats();
+  loadImageSelect();
+}
+
+async function uploadFile(file) {
+  const formData = new FormData();
+  formData.append('image', file);
+
+  const prog = document.getElementById('upload-progress');
+  prog.classList.remove('hidden');
+  prog.innerHTML = `
+    <div class="flex items-center gap-3 bg-brand-50 rounded-lg p-3">
+      <svg class="animate-spin w-5 h-5 text-brand-600" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
+      <span class="text-sm text-brand-700">Uploading ${file.name}...</span>
+    </div>`;
+
+  try {
+    const r = await fetch(BASE + '/api/upload', { method: 'POST', body: formData });
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error || 'Upload failed');
+
+    prog.classList.add('hidden');
+    addRecentUpload(d);
+    toast('Image uploaded!', 'success');
+  } catch(e) {
+    prog.classList.add('hidden');
+    toast(e.message, 'error');
+  }
+}
+
+function addRecentUpload(img) {
+  const cont = document.getElementById('recent-uploads');
+  const el = document.createElement('div');
+  el.className = 'flex items-center gap-3 bg-green-50 border border-green-200 rounded-lg p-3';
+  el.innerHTML = `
+    <img src="${img.public_url}" class="w-10 h-10 rounded object-cover" />
+    <div class="flex-1 min-w-0">
+      <p class="text-sm font-medium text-gray-800 truncate">${img.original_name}</p>
+      <button onclick="copyUrl('${img.public_url}')" class="text-xs text-brand-600 hover:text-brand-700 font-medium">Copy URL</button>
+    </div>
+    <svg class="w-5 h-5 text-green-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>`;
+  cont.prepend(el);
+}
+
+function copyUrl(url) {
+  navigator.clipboard.writeText(url).then(() => toast('URL copied!', 'success'));
+}
+
+// ─── Image Select for Posting ───────────────────────────────────────────────
+async function loadImageSelect() {
+  try {
+    const r = await fetch(BASE + '/api/images');
+    const images = await r.json();
+    const sel = document.getElementById('post-image');
+    sel.innerHTML = '<option value="">-- Choose an uploaded image --</option>';
+    images.forEach(img => {
+      const opt = document.createElement('option');
+      opt.value = img.public_url;
+      opt.dataset.id = img.id;
+      opt.textContent = `${img.original_name} (${new Date(img.created_at).toLocaleDateString()})`;
+      sel.appendChild(opt);
+    });
+  } catch(e) { console.error('Load images error:', e); }
+}
+
+document.getElementById('post-image').addEventListener('change', (e) => {
+  const preview = document.getElementById('post-image-preview');
+  const img = document.getElementById('post-preview-img');
+  if (e.target.value) {
+    img.src = e.target.value;
+    preview.classList.remove('hidden');
+  } else {
+    preview.classList.add('hidden');
+  }
+});
+
+// ─── AI Caption ─────────────────────────────────────────────────────────────
+async function generateCaption() {
+  const btn = document.getElementById('ai-caption-btn');
+  btn.textContent = 'Generating...';
+  btn.disabled = true;
+  try {
+    const r = await fetch(BASE + '/generate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type: 'caption', prompt: 'Write a mystery pack Instagram post caption for the current drop' }),
+    });
+    const d = await r.json();
+    if (d.text) document.getElementById('post-caption').value = d.text;
+    toast('Caption generated!', 'success');
+  } catch(e) { toast('Failed to generate caption', 'error'); }
+  btn.innerHTML = '<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg> AI Generate';
+  btn.disabled = false;
+}
+
+// ─── Publish Post ───────────────────────────────────────────────────────────
+async function publishPost() {
+  const imageUrl = document.getElementById('post-image').value || document.getElementById('post-url').value;
+  const caption = document.getElementById('post-caption').value;
+
+  if (!imageUrl) { toast('Select an image or paste a URL', 'error'); return; }
+
+  const btn = document.getElementById('publish-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<svg class="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg> Publishing...';
+
+  try {
+    const sel = document.getElementById('post-image');
+    const selectedOpt = sel.options[sel.selectedIndex];
+    const imageId = selectedOpt?.dataset?.id || null;
+
+    const r = await fetch(BASE + '/api/publish', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ image_url: imageUrl, image_id: imageId, caption }),
+    });
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error || 'Publish failed');
+    toast('Published to Instagram!', 'success');
+    document.getElementById('post-caption').value = '';
+    document.getElementById('post-image').value = '';
+    document.getElementById('post-url').value = '';
+    document.getElementById('post-image-preview').classList.add('hidden');
+    loadStats();
+  } catch(e) {
+    toast(e.message, 'error');
+  }
+  btn.disabled = false;
+  btn.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg> Publish to Instagram';
+}
+
+// ─── Gallery ────────────────────────────────────────────────────────────────
+async function loadGallery() {
+  try {
+    const r = await fetch(BASE + '/api/images');
+    const images = await r.json();
+    const grid = document.getElementById('gallery-grid');
+    document.getElementById('gallery-count').textContent = `${images.length} image${images.length !== 1 ? 's' : ''}`;
+
+    if (images.length === 0) {
+      grid.innerHTML = '<div class="text-center text-sm text-gray-400 col-span-full py-12">No images uploaded yet</div>';
+      return;
+    }
+
+    grid.innerHTML = images.map(img => `
+      <div class="img-card relative group rounded-xl overflow-hidden border border-gray-200 shadow-sm">
+        <img src="${img.public_url}" alt="${img.original_name}" class="w-full h-40 object-cover" />
+        <div class="img-overlay absolute inset-0 bg-black/50 opacity-0 transition flex flex-col items-center justify-center gap-2">
+          <button onclick="copyUrl('${img.public_url}')" class="bg-white text-gray-800 text-xs font-medium px-3 py-1.5 rounded-lg hover:bg-gray-100">Copy URL</button>
+          <button onclick="deleteImage('${img.id}')" class="bg-red-500 text-white text-xs font-medium px-3 py-1.5 rounded-lg hover:bg-red-600">Delete</button>
+        </div>
+        <div class="p-2">
+          <p class="text-xs text-gray-600 truncate">${img.original_name}</p>
+          <p class="text-xs text-gray-400">${formatBytes(img.size)}</p>
+        </div>
+      </div>
+    `).join('');
+  } catch(e) { console.error('Gallery error:', e); }
+}
+
+async function deleteImage(id) {
+  if (!confirm('Delete this image?')) return;
+  try {
+    const r = await fetch(BASE + '/api/images/' + id, { method: 'DELETE' });
+    if (!r.ok) throw new Error('Delete failed');
+    toast('Image deleted', 'success');
+    loadGallery();
+    loadStats();
+    loadImageSelect();
+  } catch(e) { toast(e.message, 'error'); }
+}
+
+// ─── Posts ──────────────────────────────────────────────────────────────────
+async function loadPosts() {
+  try {
+    const r = await fetch(BASE + '/api/posts');
+    const posts = await r.json();
+    const list = document.getElementById('posts-list');
+
+    if (posts.length === 0) {
+      list.innerHTML = '<div class="text-center text-sm text-gray-400 py-12">No posts yet</div>';
+      return;
+    }
+
+    list.innerHTML = posts.map(p => {
+      const statusColors = { published: 'bg-green-100 text-green-700', failed: 'bg-red-100 text-red-700', draft: 'bg-yellow-100 text-yellow-700' };
+      const sc = statusColors[p.status] || statusColors.draft;
+      return `
+        <div class="flex items-start gap-4 border border-gray-100 rounded-xl p-4 hover:bg-gray-50 transition">
+          ${p.image_url ? `<img src="${p.image_url}" class="w-16 h-16 rounded-lg object-cover shrink-0" />` : '<div class="w-16 h-16 bg-gray-100 rounded-lg shrink-0 flex items-center justify-center text-gray-400 text-xs">No img</div>'}
+          <div class="flex-1 min-w-0">
+            <p class="text-sm text-gray-800 line-clamp-2">${p.caption || '<em class="text-gray-400">No caption</em>'}</p>
+            <div class="flex items-center gap-2 mt-1.5">
+              <span class="text-xs font-medium px-2 py-0.5 rounded-full ${sc}">${p.status}</span>
+              <span class="text-xs text-gray-400">${new Date(p.created_at).toLocaleString()}</span>
+            </div>
+            ${p.error ? `<p class="text-xs text-red-500 mt-1">${p.error}</p>` : ''}
+          </div>
+        </div>`;
+    }).join('');
+  } catch(e) { console.error('Posts error:', e); }
+}
+
+// ─── Activity ───────────────────────────────────────────────────────────────
+async function loadActivity() {
+  try {
+    const r = await fetch(BASE + '/api/activity');
+    const items = await r.json();
+    const list = document.getElementById('activity-list');
+
+    if (items.length === 0) {
+      list.innerHTML = '<div class="text-center text-sm text-gray-400 py-12">No activity yet</div>';
+      return;
+    }
+
+    const icons = {
+      upload: '<svg class="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>',
+      post: '<svg class="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg>',
+      error: '<svg class="w-4 h-4 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>',
+      delete: '<svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>',
+    };
+
+    list.innerHTML = items.map(a => `
+      <div class="flex items-start gap-3 py-2 border-b border-gray-50 last:border-0">
+        ${icons[a.type] || icons.upload}
+        <div class="flex-1">
+          <p class="text-sm text-gray-700">${a.message}</p>
+          <p class="text-xs text-gray-400">${new Date(a.created_at).toLocaleString()}</p>
+        </div>
+      </div>
+    `).join('');
+  } catch(e) { console.error('Activity error:', e); }
+}
+
+// ─── Helpers ────────────────────────────────────────────────────────────────
+function formatBytes(bytes) {
+  if (!bytes) return '0 B';
+  const k = 1024;
+  const sizes = ['B', 'KB', 'MB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+}
+
+// ─── Init ───────────────────────────────────────────────────────────────────
+loadStats();
+loadImageSelect();
+</script>
+</body>
+</html>
