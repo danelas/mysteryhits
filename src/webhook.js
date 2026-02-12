@@ -29,7 +29,13 @@ async function handleWebhookEvent(req, res) {
   try {
     const body = req.body;
 
-    if (body.object !== "instagram") return;
+    // Debug: log every incoming webhook payload
+    console.log("📨 Webhook received:", JSON.stringify(body, null, 2));
+
+    if (body.object !== "instagram") {
+      console.log(`⚠️ Ignoring webhook object type: ${body.object}`);
+      return;
+    }
 
     for (const entry of body.entry || []) {
       // Handle DMs
