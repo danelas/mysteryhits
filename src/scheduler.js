@@ -86,57 +86,66 @@ IMPORTANT:
 - Write with authority — you ARE the brand, not a guest blogger`;
 
 /**
+ * Generate a blog post (title, HTML content, tags) without publishing.
+ * Returns { title, content, tags } for preview.
+ */
+async function generateBlogPost(customPrompt) {
+  console.log("📝 Generating blog post…");
+
+  const completion = await getOpenAIClient().chat.completions.create({
+    model: "gpt-4o-mini",
+    messages: [
+      { role: "system", content: BLOG_SYSTEM_PROMPT },
+      { role: "user", content: customPrompt || DAILY_POST_PROMPT },
+    ],
+    max_tokens: 2000,
+    temperature: 0.75,
+  });
+
+  const raw = completion.choices[0]?.message?.content?.trim();
+  if (!raw) throw new Error("Empty response from OpenAI");
+
+  // Split title from body (first line = title, rest = body)
+  const lines = raw.split("\n");
+  const titleLine = lines.find((l) => l.trim() !== "");
+  const title = titleLine.replace(/^#+\s*/, "").replace(/^\*+/, "").replace(/\*+$/, "").trim();
+  const bodyRaw = lines.slice(lines.indexOf(titleLine) + 1).join("\n").trim();
+
+  // Convert markdown-style body to HTML
+  let content = bodyRaw
+    .replace(/^## (.+)$/gm, "<h2>$1</h2>")
+    .replace(/^### (.+)$/gm, "<h3>$1</h3>")
+    .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
+    .replace(/\*(.+?)\*/g, "<em>$1</em>")
+    .replace(/\[(.+?)\]\((.+?)\)/g, '<a href="$2">$1</a>');
+
+  // Wrap plain text lines in <p> tags (skip lines that are already HTML)
+  content = content
+    .split("\n")
+    .map((line) => {
+      const trimmed = line.trim();
+      if (!trimmed) return "";
+      if (trimmed.startsWith("<h") || trimmed.startsWith("<div") || trimmed.startsWith("<a ") || trimmed.startsWith("<ul") || trimmed.startsWith("<li") || trimmed.startsWith("<p")) return trimmed;
+      return `<p>${trimmed}</p>`;
+    })
+    .filter((l) => l)
+    .join("\n");
+
+  // Extract tags from the title and content for better SEO
+  const tagPool = ["mystery packs", "trading cards", "collector", "pokemon", "one piece", "tcg"];
+  const lowerContent = (title + " " + bodyRaw).toLowerCase();
+  const tags = tagPool.filter((t) => lowerContent.includes(t));
+  if (tags.length === 0) tags.push("mystery packs", "trading cards");
+
+  return { title, content, tags };
+}
+
+/**
  * Generate a daily blog post and publish to WordPress.
  */
 async function generateAndPublishDailyPost() {
-  console.log("📝 Generating daily blog post…");
-
   try {
-    const completion = await getOpenAIClient().chat.completions.create({
-      model: "gpt-4o-mini",
-      messages: [
-        { role: "system", content: BLOG_SYSTEM_PROMPT },
-        { role: "user", content: DAILY_POST_PROMPT },
-      ],
-      max_tokens: 2000,
-      temperature: 0.75,
-    });
-
-    const raw = completion.choices[0]?.message?.content?.trim();
-    if (!raw) throw new Error("Empty response from OpenAI");
-
-    // Split title from body (first line = title, rest = body)
-    const lines = raw.split("\n");
-    const titleLine = lines.find((l) => l.trim() !== "");
-    const title = titleLine.replace(/^#+\s*/, "").replace(/^\*+/, "").replace(/\*+$/, "").trim();
-    const bodyRaw = lines.slice(lines.indexOf(titleLine) + 1).join("\n").trim();
-
-    // Convert markdown-style body to HTML
-    let content = bodyRaw
-      .replace(/^## (.+)$/gm, "<h2>$1</h2>")
-      .replace(/^### (.+)$/gm, "<h3>$1</h3>")
-      .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
-      .replace(/\*(.+?)\*/g, "<em>$1</em>")
-      .replace(/\[(.+?)\]\((.+?)\)/g, '<a href="$2">$1</a>');
-
-    // Wrap plain text lines in <p> tags (skip lines that are already HTML)
-    content = content
-      .split("\n")
-      .map((line) => {
-        const trimmed = line.trim();
-        if (!trimmed) return "";
-        if (trimmed.startsWith("<h") || trimmed.startsWith("<div") || trimmed.startsWith("<a ") || trimmed.startsWith("<ul") || trimmed.startsWith("<li") || trimmed.startsWith("<p")) return trimmed;
-        return `<p>${trimmed}</p>`;
-      })
-      .filter((l) => l)
-      .join("\n");
-
-    // Extract tags from the title and content for better SEO
-    const tagPool = ["mystery packs", "trading cards", "collector", "pokemon", "one piece", "tcg"];
-    const lowerContent = (title + " " + bodyRaw).toLowerCase();
-    const tags = tagPool.filter((t) => lowerContent.includes(t));
-    if (tags.length === 0) tags.push("mystery packs", "trading cards");
-
+    const { title, content, tags } = await generateBlogPost();
     const result = await publishToWordPress(title, content, "publish", tags);
     console.log(`✅ Daily post published: ${result.link}`);
     return result;
@@ -165,4 +174,4 @@ function startScheduler() {
   });
 }
 
-module.exports = { startScheduler, generateAndPublishDailyPost };
+module.exports = { startScheduler, generateAndPublishDailyPost, generateBlogPost, publishToWordPress };

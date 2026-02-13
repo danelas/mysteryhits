@@ -8,7 +8,7 @@ const db = require("./db");
 const { handleWebhookVerification, handleWebhookEvent } = require("./webhook");
 const { uploadPost } = require("./instagram");
 const { generateContent } = require("./chat");
-const { startScheduler, generateAndPublishDailyPost } = require("./scheduler");
+const { startScheduler, generateAndPublishDailyPost, generateBlogPost, publishToWordPress } = require("./scheduler");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -115,8 +115,32 @@ app.post("/generate", async (req, res) => {
   }
 });
 
-// ─── Trigger Daily Blog Post Manually ────────────────────────────────────────
-// POST /daily-post  — generate and publish a blog post to WordPress right now
+// ─── API: Generate Blog Post Preview ─────────────────────────────────────────
+app.post("/api/blog/generate", async (req, res) => {
+  try {
+    const { prompt } = req.body || {};
+    const post = await generateBlogPost(prompt || undefined);
+    res.json({ success: true, ...post });
+  } catch (err) {
+    console.error("Blog generate error:", err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ─── API: Publish Blog Post to WordPress ─────────────────────────────────────
+app.post("/api/blog/publish", async (req, res) => {
+  try {
+    const { title, content, tags } = req.body;
+    if (!title || !content) return res.status(400).json({ error: "title and content are required" });
+    const result = await publishToWordPress(title, content, "publish", tags || []);
+    res.json({ success: true, result });
+  } catch (err) {
+    console.error("Blog publish error:", err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ─── Trigger Daily Blog Post (auto generate + publish) ──────────────────────
 app.post("/daily-post", async (_req, res) => {
   try {
     const result = await generateAndPublishDailyPost();
