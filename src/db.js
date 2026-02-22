@@ -39,6 +39,13 @@ async function initDb() {
         message TEXT,
         created_at TIMESTAMPTZ DEFAULT NOW()
       );
+
+      CREATE TABLE IF NOT EXISTS blog_history (
+        id SERIAL PRIMARY KEY,
+        title TEXT NOT NULL,
+        category TEXT,
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      );
     `);
     console.log("✅ Database initialized (PostgreSQL)");
   } finally {
@@ -133,6 +140,22 @@ const dbApi = {
     all: async () => {
       const { rows } = await pool.query(
         `SELECT * FROM activity_log ORDER BY created_at DESC LIMIT 50`
+      );
+      return rows;
+    },
+  },
+
+  insertBlogHistory: {
+    run: async (title, category) => {
+      await pool.query(`INSERT INTO blog_history (title, category) VALUES ($1, $2)`, [title, category || null]);
+    },
+  },
+
+  getRecentBlogHistory: {
+    all: async (limit = 5) => {
+      const { rows } = await pool.query(
+        `SELECT title, category, created_at FROM blog_history ORDER BY created_at DESC LIMIT $1`,
+        [limit]
       );
       return rows;
     },

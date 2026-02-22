@@ -1,5 +1,6 @@
 const cron = require("node-cron");
 const OpenAI = require("openai");
+const db = require("./db");
 const { publishToWordPress } = require("./wordpress");
 
 let _openai = null;
@@ -64,39 +65,123 @@ CTA RULES
 - If the article is One Piece-focused, make the One Piece button primary (listed first)
 - Always include BOTH buttons regardless of topic`;
 
-const DAILY_POST_PROMPT = `Write a blog article for Mystery Hits Factory's website.
+const TOPIC_CATEGORIES = [
+  {
+    key: "set_spotlight",
+    label: "Set Spotlight",
+    instructions: `CATEGORY: SET SPOTLIGHT
+Pick one specific Pokemon or One Piece TCG set (e.g., Pokemon 151, Obsidian Flames, OP-05 Awakening of the New Era).
+- Explain the release context, which chase cards matter, and why collectors still care today.
+- Reference at least two specific cards or rarity tiers from that set.
+- Explain how Mystery Hits Factory sources that set for our Standard/Premium/Deluxe tiers.
+- Target a keyword like "[Set Name] cards worth collecting" in the title.`,
+  },
+  {
+    key: "collector_guide",
+    label: "Collector Guide",
+    instructions: `CATEGORY: COLLECTOR GUIDE
+Teach collectors a practical skill (grading, storage, budgeting, pack selection, etc.).
+- Provide a step-by-step framework or checklist.
+- Reference real sets/eras when giving examples.
+- Tie the advice back to how curated mystery packs can help.`,
+  },
+  {
+    key: "mystery_pack_education",
+    label: "Mystery Pack Education",
+    instructions: `CATEGORY: MYSTERY PACK EDUCATION
+Explain how curated mystery packs should be evaluated.
+- Contrast Mystery Hits Factory standards (balanced rarity, sleeved hits, tier differences) with junk packs.
+- Reference actual Pokemon/One Piece sets used in each tier.
+- Target keywords like "best mystery packs for Pokemon cards" or "are mystery packs worth it".`,
+  },
+  {
+    key: "market_trends",
+    label: "Market & Trends",
+    instructions: `CATEGORY: MARKET & TREND ANALYSIS
+Cover what's trending in the TCG hobby right now.
+- Reference recent releases or upcoming sets (Pokemon Scarlet & Violet blocks, OP-08, etc.).
+- Mention price/demand signals collectors care about.
+- Explain how Mystery Hits Factory adjusts pack curation accordingly.`,
+  },
+  {
+    key: "tier_comparison",
+    label: "Tier Comparison",
+    instructions: `CATEGORY: TIER COMPARISON
+Compare Standard vs Premium vs Deluxe packs (and optionally Pokemon vs One Piece or sealed boxes).
+- Explain which collectors should pick each tier.
+- Reference example hits/sets that appear in each tier.
+- Help the reader choose the right budget/experience.`,
+  },
+];
 
-Pick ONE of these topic categories (rotate — do not repeat the same category two days in a row):
+const CATEGORY_LABELS = TOPIC_CATEGORIES.reduce(
+  (map, cat) => {
+    map[cat.key] = cat.label;
+    return map;
+  },
+  { custom: "Custom" }
+);
 
-1) SET SPOTLIGHT: Deep-dive into a specific Pokemon or One Piece TCG set. Cover what makes it collectible, key chase cards, market relevance, and why it might appear in our mystery packs. Target keyword: "[Set Name] cards worth collecting" or similar.
+function buildHistoryNote(history) {
+  if (!history?.length) return "";
+  const lines = history.map((h) => `- ${h.title}`);
+  return `Recent articles already published:
+${lines.join("\n")}
+Do NOT repeat these angles, keywords, or titles.`;
+}
 
-2) COLLECTOR GUIDE: Practical advice for collectors. Examples: "How to grade your first Pokemon card", "Best One Piece cards to invest in 2025", "What to look for in a sealed mystery pack". Target a how-to or best-of keyword.
+function buildPromptForCategory(category, historyNote) {
+  return `${category.instructions}
 
-3) MYSTERY PACK EDUCATION: Explain how curated mystery packs work, what separates quality packs from junk, how our tiers differ, why rarity distribution matters. Target keywords like "best mystery packs for Pokemon cards" or "are mystery packs worth it".
+${historyNote}`.trim();
+}
 
-4) MARKET & TREND ANALYSIS: Cover what is trending in the TCG hobby right now. Reference specific sets, recent releases, price movements, or community buzz. Target keywords like "Pokemon TCG trends 2025" or "One Piece TCG popularity".
+function buildPromptForCustom(customPrompt, historyNote) {
+  return `CUSTOM TOPIC REQUEST:
+${customPrompt}
 
-5) COMPARISON & TIER GUIDE: Compare our Standard vs Premium vs Deluxe tiers, or compare mystery packs vs booster boxes, or compare Pokemon vs One Piece collecting. Target comparison keywords.
+${historyNote}
 
-IMPORTANT:
-- The title must contain a real searchable keyword phrase
-- Reference at least 2-3 specific set names or card names in the body
-- Include at least one internal link naturally in the text (to our Pokemon page, One Piece page, or Packs page)
-- End with the CTA buttons as specified in your instructions
-- Write with authority — you ARE the brand, not a guest blogger`;
+Ensure the article aligns with all brand rules and SEO targets above.`.trim();
+}
+
+async function pickNextCategory(recentHistory) {
+  const recentKeys = recentHistory
+    .filter((h) => h.category && h.category !== "custom")
+    .slice(0, 3)
+    .map((h) => h.category);
+
+  const fallback = TOPIC_CATEGORIES[Math.floor(Math.random() * TOPIC_CATEGORIES.length)];
+  const candidate = TOPIC_CATEGORIES.find((cat) => !recentKeys.includes(cat.key));
+  return candidate || fallback;
+}
 
 /**
  * Generate a blog post (title, HTML content, tags) without publishing.
  * Returns { title, content, tags } for preview.
  */
-async function generateBlogPost(customPrompt) {
+async function generateBlogPost(options = {}) {
   console.log("📝 Generating blog post…");
+
+  const recentHistory = await db.getRecentBlogHistory.all(5);
+  const historyNote = buildHistoryNote(recentHistory);
+
+  let category = "custom";
+  let userPrompt;
+
+  if (options.customPrompt && options.customPrompt.trim()) {
+    userPrompt = buildPromptForCustom(options.customPrompt.trim(), historyNote);
+  } else {
+    const nextCategory = await pickNextCategory(recentHistory);
+    category = nextCategory.key;
+    userPrompt = buildPromptForCategory(nextCategory, historyNote);
+  }
 
   const completion = await getOpenAIClient().chat.completions.create({
     model: "gpt-4o-mini",
     messages: [
       { role: "system", content: BLOG_SYSTEM_PROMPT },
-      { role: "user", content: customPrompt || DAILY_POST_PROMPT },
+      { role: "user", content: userPrompt },
     ],
     max_tokens: 2000,
     temperature: 0.75,
@@ -137,7 +222,7 @@ async function generateBlogPost(customPrompt) {
   const tags = tagPool.filter((t) => lowerContent.includes(t));
   if (tags.length === 0) tags.push("mystery packs", "trading cards");
 
-  return { title, content, tags };
+  return { title, content, tags, category };
 }
 
 /**
@@ -145,8 +230,9 @@ async function generateBlogPost(customPrompt) {
  */
 async function generateAndPublishDailyPost() {
   try {
-    const { title, content, tags } = await generateBlogPost();
+    const { title, content, tags, category } = await generateBlogPost();
     const result = await publishToWordPress(title, content, "publish", tags);
+    await db.insertBlogHistory.run(title, category);
     console.log(`✅ Daily post published: ${result.link}`);
     return result;
   } catch (err) {

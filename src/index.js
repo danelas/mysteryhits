@@ -119,7 +119,7 @@ app.post("/generate", async (req, res) => {
 app.post("/api/blog/generate", async (req, res) => {
   try {
     const { prompt } = req.body || {};
-    const post = await generateBlogPost(prompt || undefined);
+    const post = await generateBlogPost({ customPrompt: prompt || undefined });
     res.json({ success: true, ...post });
   } catch (err) {
     console.error("Blog generate error:", err.message);
@@ -130,12 +130,24 @@ app.post("/api/blog/generate", async (req, res) => {
 // ─── API: Publish Blog Post to WordPress ─────────────────────────────────────
 app.post("/api/blog/publish", async (req, res) => {
   try {
-    const { title, content, tags } = req.body;
+    const { title, content, tags, category } = req.body;
     if (!title || !content) return res.status(400).json({ error: "title and content are required" });
     const result = await publishToWordPress(title, content, "publish", tags || []);
+    await db.insertBlogHistory.run(title, category || "custom");
     res.json({ success: true, result });
   } catch (err) {
     console.error("Blog publish error:", err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ─── API: Recent Blog History ───────────────────────────────────────────────
+app.get("/api/blog/history", async (_req, res) => {
+  try {
+    const history = await db.getRecentBlogHistory.all(5);
+    res.json({ success: true, history });
+  } catch (err) {
+    console.error("Blog history error:", err.message);
     res.status(500).json({ error: err.message });
   }
 });
