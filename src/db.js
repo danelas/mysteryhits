@@ -152,9 +152,9 @@ const dbApi = {
   },
 
   getRecentBlogHistory: {
-    all: async (limit = 5) => {
+    all: async (limit = 10) => {
       const { rows } = await pool.query(
-        `SELECT title, category, created_at FROM blog_history ORDER BY created_at DESC LIMIT $1`,
+        `SELECT title, category, created_at FROM blog_history WHERE created_at >= NOW() - INTERVAL '7 days' ORDER BY created_at DESC LIMIT $1`,
         [limit]
       );
       return rows;

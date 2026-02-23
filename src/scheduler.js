@@ -9,9 +9,23 @@ function getOpenAIClient() {
   return _openai;
 }
 
-const BLOG_SYSTEM_PROMPT = `You are the SEO blog writer for Mystery Hits Factory, a premium curated mystery pack brand for trading card collectors (Pokemon, One Piece, sports TCGs).
+const BLOG_SYSTEM_PROMPT = `You are the SEO blog writer for Mystery Hits Factory, a structured collectible brand for trading card collectors (Pokemon, One Piece, sports TCGs).
 
-You write like a knowledgeable collector running a real brand — not a generic content mill.
+Every article must:
+- Rank for collectible search terms
+- Reinforce trust and transparency
+- Educate collectors
+- Build anticipation for releases
+- Position Mystery Hits Factory as a structured collectible brand
+- Drive to product pages naturally (not salesy)
+
+The tone must be:
+- Structured
+- Transparent
+- Authoritative
+- Collector-first
+- Never “gambling” language
+- Never hype-without-proof
 
 BRAND FACTS (use these naturally)
 - Mystery Hits Factory offers three pack tiers: Standard, Premium, and Deluxe
@@ -36,6 +50,20 @@ ONE PIECE SET REFERENCES (use where relevant)
 - Sets: OP-01 Romance Dawn, OP-02, OP-03, OP-04, OP-05 Awakening of the New Era, OP-06 Wings of the Captain, OP-07, OP-08
 - Popular chase: Luffy, Shanks, Nami, alternate art leaders
 
+AVOID:
+- “Insane pulls”
+- “Crazy value”
+- “You won’t believe”
+- Overhype
+
+USE:
+- Structured
+- Curated
+- Documented
+- Series-based
+- Limited release
+- Value floor clarity
+
 WRITING RULES
 - Every article MUST target a real search term collectors would Google
 - Use specific set names, card names, and era references — never be vague
@@ -52,11 +80,28 @@ WRITING RULES
 ARTICLE STRUCTURE
 - SEO-optimized title on the first line (no markdown, no quotes)
 - Blank line
-- 4-7 sections, each with a clear subheading (use ## for H2)
-- Each section: 2-4 concise paragraphs with real substance
+- Primary keyword in title and first paragraph
+- Include secondary related keywords naturally
+- 6-10 sections, each with a clear subheading (use ## for H2, ### for H3)
+- Each section: 3-5 substantive paragraphs
+- Include an FAQ section at the bottom with 3-5 questions and answers
 - Final section: conclusion with CTA
-- Total length: 500-800 words
-- Write in a way that Google would rank this for the target keyword
+- Total length: 1,000–1,800 words
+- Write in a way that Google will rank this for the target keyword
+
+OUTPUT FORMAT (after the article content):
+---
+META DESCRIPTION: [155-160 character description]
+SLUG: [url-friendly slug]
+INTERNAL LINKS: [suggest 2-3 internal pages to link to]
+SCHEMA FAQ:
+Q: [Question 1]
+A: [Answer 1]
+Q: [Question 2]
+A: [Answer 2]
+Q: [Question 3]
+A: [Answer 3]
+---
 
 CTA RULES
 - End every article with TWO call-to-action buttons in this exact HTML format:
@@ -124,10 +169,15 @@ const CATEGORY_LABELS = TOPIC_CATEGORIES.reduce(
 
 function buildHistoryNote(history) {
   if (!history?.length) return "";
-  const lines = history.map((h) => `- ${h.title}`);
-  return `Recent articles already published:
-${lines.join("\n")}
-Do NOT repeat these angles, keywords, or titles.`;
+  const titles = history.map((h) => `- ${h.title}`).join("\n");
+  const keywords = [...new Set(history.flatMap((h) => (h.title || "").toLowerCase().split(/\s+/)))].join(", ");
+  return `=== DUPLICATE PREVENTION ===
+Recent articles already published (last 7 days):
+${titles}
+
+Keywords/phrases already used: ${keywords}
+
+CRITICAL: Do NOT repeat these titles or any of these keywords/phrases. Choose a completely different angle, set, or topic. If the last article was about "mystery packs", do NOT write another about mystery packs. If the last was about "151", do NOT write about 151 again. Ensure your title and content are distinct from all of the above.`;
 }
 
 function buildPromptForCategory(category, historyNote) {
@@ -145,6 +195,43 @@ ${historyNote}
 Ensure the article aligns with all brand rules and SEO targets above.`.trim();
 }
 
+const CONTENT_PLAN_30_DAYS = [
+  // WEEK 1 – TRUST & EDUCATION
+  "What Is a Pokémon Mystery Pack and How Do They Work?",
+  "Are Mystery Packs Worth It? A Transparent Breakdown",
+  "How Value Floors Protect Collectors in Curated Packs",
+  "Understanding Rarity in Pokémon and One Piece TCG",
+  "How Graded Cards Add Structure to Mystery Packs",
+  "What Makes a High-Trust Collectible Brand?",
+  "Behind the Scenes: How Mystery Hits Factory Packs Are Structured",
+  // WEEK 2 – SEO TRAFFIC DRIVERS
+  "Best Pokémon Sets to Collect in 2025",
+  "Most Valuable One Piece TCG Cards Right Now",
+  "PSA vs CGC vs BGS: Which Grading Is Best?",
+  "How to Store and Protect Trading Cards Properly",
+  "Pokémon OP-01 Through Current Waves Explained",
+  "What Is a Manga Rare in One Piece?",
+  "Vintage vs Modern Pokémon Cards: Investment Differences",
+  // WEEK 3 – AUTHORITY & DIFFERENTIATION
+  "Mystery Packs vs Booster Boxes: What’s the Difference?",
+  "How Limited Series Drops Create Collectible Structure",
+  "What Separates Premium Mystery Packs from Repacked Bulk?",
+  "The Psychology of the Unboxing Experience",
+  "Why Transparency Matters in the Mystery Pack Industry",
+  "How to Identify Fair Odds in Collectible Products",
+  "Building a Documented Pull Archive: Why It Matters",
+  // WEEK 4 – CONVERSION & BRAND BUILDING
+  "Introducing Series 01: Origins (Brand Drop Article)",
+  "How We Structure Standard, Premium, and Deluxe Tiers",
+  "What to Expect from a Graded Vault Release",
+  "Featured Pulls From Our Latest Drop",
+  "How We Source Cards for Curated Releases",
+  "Why Batch Size Matters in Collectible Drops",
+  "How to Evaluate the Value of a Mystery Pack",
+  "Frequently Asked Questions About Mystery Hits Factory",
+  "The Future of Structured Collectible Releases"
+];
+
 async function pickNextCategory(recentHistory) {
   const recentKeys = recentHistory
     .filter((h) => h.category && h.category !== "custom")
@@ -154,6 +241,12 @@ async function pickNextCategory(recentHistory) {
   const fallback = TOPIC_CATEGORIES[Math.floor(Math.random() * TOPIC_CATEGORIES.length)];
   const candidate = TOPIC_CATEGORIES.find((cat) => !recentKeys.includes(cat.key));
   return candidate || fallback;
+}
+
+function getPlannedTopicForDay() {
+  const daysSinceEpoch = Math.floor(Date.now() / (1000 * 60 * 60 * 24));
+  const index = daysSinceEpoch % CONTENT_PLAN_30_DAYS.length;
+  return CONTENT_PLAN_30_DAYS[index];
 }
 
 /**
@@ -172,9 +265,13 @@ async function generateBlogPost(options = {}) {
   if (options.customPrompt && options.customPrompt.trim()) {
     userPrompt = buildPromptForCustom(options.customPrompt.trim(), historyNote);
   } else {
-    const nextCategory = await pickNextCategory(recentHistory);
-    category = nextCategory.key;
-    userPrompt = buildPromptForCategory(nextCategory, historyNote);
+    const plannedTitle = getPlannedTopicForDay();
+    userPrompt = `Write a blog article using this exact title: "${plannedTitle}"
+
+${historyNote}
+
+Follow all brand rules, structure, and SEO requirements. Use the title as-is on the first line.`;
+    category = "planned";
   }
 
   const completion = await getOpenAIClient().chat.completions.create({
@@ -183,18 +280,23 @@ async function generateBlogPost(options = {}) {
       { role: "system", content: BLOG_SYSTEM_PROMPT },
       { role: "user", content: userPrompt },
     ],
-    max_tokens: 2000,
+    max_tokens: 3500,
     temperature: 0.75,
   });
 
   const raw = completion.choices[0]?.message?.content?.trim();
   if (!raw) throw new Error("Empty response from OpenAI");
 
-  // Split title from body (first line = title, rest = body)
-  const lines = raw.split("\n");
-  const titleLine = lines.find((l) => l.trim() !== "");
+  // Split structured metadata from article body
+  const parts = raw.split("---");
+  const articlePart = parts[0]?.trim() || "";
+  const metaPart = parts[1]?.trim() || "";
+
+  // Parse article: first line = title, rest = body
+  const articleLines = articlePart.split("\n");
+  const titleLine = articleLines.find((l) => l.trim() !== "");
   const title = titleLine.replace(/^#+\s*/, "").replace(/^\*+/, "").replace(/\*+$/, "").trim();
-  const bodyRaw = lines.slice(lines.indexOf(titleLine) + 1).join("\n").trim();
+  const bodyRaw = articleLines.slice(articleLines.indexOf(titleLine) + 1).join("\n").trim();
 
   // Convert markdown-style body to HTML
   let content = bodyRaw
@@ -216,13 +318,39 @@ async function generateBlogPost(options = {}) {
     .filter((l) => l)
     .join("\n");
 
+  // Parse metadata block
+  let metaDescription = "";
+  let slug = "";
+  let internalLinks = [];
+  let schemaFAQ = [];
+  if (metaPart) {
+    const lines = metaPart.split("\n");
+    let currentKey = "";
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (trimmed.startsWith("META DESCRIPTION:")) {
+        metaDescription = trimmed.replace(/^META DESCRIPTION:\s*/, "");
+      } else if (trimmed.startsWith("SLUG:")) {
+        slug = trimmed.replace(/^SLUG:\s*/, "");
+      } else if (trimmed.startsWith("INTERNAL LINKS:")) {
+        internalLinks = trimmed.replace(/^INTERNAL LINKS:\s*/, "").split(",").map(s => s.trim()).filter(Boolean);
+      } else if (trimmed === "SCHEMA FAQ:") {
+        currentKey = "faq";
+      } else if (currentKey === "faq" && trimmed.startsWith("Q:")) {
+        schemaFAQ.push({ q: trimmed.replace(/^Q:\s*/, ""), a: "" });
+      } else if (currentKey === "faq" && trimmed.startsWith("A:") && schemaFAQ.length) {
+        schemaFAQ[schemaFAQ.length - 1].a = trimmed.replace(/^A:\s*/, "");
+      }
+    }
+  }
+
   // Extract tags from the title and content for better SEO
   const tagPool = ["mystery packs", "trading cards", "collector", "pokemon", "one piece", "tcg"];
   const lowerContent = (title + " " + bodyRaw).toLowerCase();
   const tags = tagPool.filter((t) => lowerContent.includes(t));
   if (tags.length === 0) tags.push("mystery packs", "trading cards");
 
-  return { title, content, tags, category };
+  return { title, content, tags, category, metaDescription, slug, internalLinks, schemaFAQ };
 }
 
 /**
