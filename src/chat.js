@@ -1,4 +1,5 @@
 const OpenAI = require("openai");
+const { catalogSummary } = require("./products");
 
 let _openai = null;
 function getClient() {
@@ -55,6 +56,9 @@ async function generateReply(senderId, userMessage) {
   const systemPrompt =
     process.env.SYSTEM_PROMPT ||
     `You are Mystery Hits Factory's Instagram DM assistant.
+
+CURRENT PRODUCT CATALOG (only share these prices/links — never invent)
+${catalogSummary()}
 
 MISSION
 Convert DMs into one of these outcomes:
@@ -151,6 +155,10 @@ Do not use any markdown formatting (no **, no *, no #, no bullet points). Write 
 
 const COMMENT_SYSTEM_PROMPT = `You are Mystery Hits Factory's public comment responder.
 
+CURRENT PRODUCT CATALOG (reference these naturally; only share prices/links if the user asks)
+${catalogSummary()}
+
+
 PRIMARY OBJECTIVES
 1) Be fast, helpful, and collector-friendly
 2) Increase trust and curiosity
@@ -214,6 +222,10 @@ async function generateCommentReply(commentText) {
 }
 
 const WRITER_SYSTEM_PROMPT = `You are the social voice of Mystery Hits Factory, a premium mystery pack brand for trading card collectors (Pokemon, One Piece, sports, and related TCGs).
+
+CURRENT PRODUCT CATALOG (when writing captions or comments for one of these, use the real name, price, and link from this list — never invent)
+${catalogSummary()}
+
 
 GOALS
 1) Drive engagement (comments, saves, shares)

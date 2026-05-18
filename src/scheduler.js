@@ -2,6 +2,9 @@ const cron = require("node-cron");
 const OpenAI = require("openai");
 const db = require("./db");
 const { publishToWordPress } = require("./wordpress");
+const { catalogSummary, pickProductOfTheWeek, THEMED_PACKS, BUNDLES } = require("./products");
+const { uploadPost } = require("./instagram");
+const { generateContent } = require("./chat");
 
 let _openai = null;
 function getOpenAIClient() {
@@ -10,6 +13,10 @@ function getOpenAIClient() {
 }
 
 const BLOG_SYSTEM_PROMPT = `You are the SEO blog writer for Mystery Hits Factory, a structured collectible brand for trading card collectors (Pokemon, One Piece, sports TCGs).
+
+CURRENT PRODUCT CATALOG (link to these naturally where relevant — never invent SKUs)
+${catalogSummary()}
+
 
 Every article must:
 - Rank for collectible search terms
@@ -229,7 +236,17 @@ const CONTENT_PLAN_30_DAYS = [
   "Why Batch Size Matters in Collectible Drops",
   "How to Evaluate the Value of a Mystery Pack",
   "Frequently Asked Questions About Mystery Hits Factory",
-  "The Future of Structured Collectible Releases"
+  "The Future of Structured Collectible Releases",
+  // WEEK 5 – CHARACTER-FOCUSED PACKS
+  "Inside the Mew Mystery Pack: Standard vs Elite Tiers",
+  "Why Charizard Themed Mystery Packs Hold Their Value",
+  "Building a Gengar Collection Through Curated Mystery Packs",
+  "Standard $29.99 vs Elite $79.99 Themed Packs: What Changes",
+  // WEEK 6 – BUNDLE LADDER
+  "The Collector Bundle Explained: Graded + Sealed + Raw at $79.99",
+  "Elite Bundle Walkthrough: PSA 8-10 Plus 3 Sealed Packs",
+  "Inside the Vault Bundle: Centerpiece Slabs and Vintage Sealed",
+  "How Our 3-Tier Bundle Ladder Sets a Minimum Value Floor"
 ];
 
 async function pickNextCategory(recentHistory) {
@@ -370,22 +387,70 @@ async function generateAndPublishDailyPost() {
 }
 
 /**
- * Start the daily cron job.
- * Default: every day at 10:00 AM UTC (adjust as needed).
+ * Generate an Instagram caption for a given product (themed pack or bundle)
+ * and publish the post using the product's image URL.
+ */
+async function postProductSpotlight(productSlug) {
+  const product =
+    THEMED_PACKS.find((p) => p.slug === productSlug) ||
+    BUNDLES.find((b) => b.slug === productSlug) ||
+    pickProductOfTheWeek();
+
+  const promptContext = `Write an Instagram caption (2-5 short lines + one CTA line) for this product:
+
+Name: ${product.name}
+Price: ${product.price}
+Minimum total card value: ${product.minimumValue}
+What's inside: ${product.subtitle}
+Link: ${product.productUrl}
+
+Tone: collector-to-collector, premium, no hype, no emojis. End with a clear CTA pointing to the link (or "link in bio").`;
+
+  const caption = await generateContent("caption", promptContext);
+  console.log(`📸 Posting product spotlight: ${product.name}`);
+  const result = await uploadPost(product.imageUrl, caption);
+  try {
+    await db.insertActivity.run("post", `Product spotlight posted: ${product.name}`);
+  } catch (logErr) {
+    console.warn("activity log skipped:", logErr.message);
+  }
+  return { product, caption, result };
+}
+
+/**
+ * Start the daily + weekly cron jobs.
+ * Daily: blog post (default 10:00 AM UTC).
+ * Weekly: product spotlight to Instagram (default Monday 3:00 PM UTC).
  */
 function startScheduler() {
   const cronTime = process.env.DAILY_POST_CRON || "0 10 * * *";
-
-  console.log(`⏰ Daily post scheduler started (cron: ${cronTime})`);
-
+  console.log(`⏰ Daily blog post scheduler started (cron: ${cronTime})`);
   cron.schedule(cronTime, async () => {
-    console.log(`⏰ Cron triggered at ${new Date().toISOString()}`);
+    console.log(`⏰ Daily cron triggered at ${new Date().toISOString()}`);
     try {
       await generateAndPublishDailyPost();
     } catch (err) {
       console.error("Scheduled post error:", err.message);
     }
   });
+
+  const productCron = process.env.PRODUCT_SPOTLIGHT_CRON || "0 15 * * 1";
+  console.log(`⏰ Weekly product spotlight scheduler started (cron: ${productCron})`);
+  cron.schedule(productCron, async () => {
+    console.log(`⏰ Product spotlight cron triggered at ${new Date().toISOString()}`);
+    try {
+      const product = pickProductOfTheWeek();
+      await postProductSpotlight(product.slug);
+    } catch (err) {
+      console.error("Product spotlight error:", err.message);
+    }
+  });
 }
 
-module.exports = { startScheduler, generateAndPublishDailyPost, generateBlogPost, publishToWordPress };
+module.exports = {
+  startScheduler,
+  generateAndPublishDailyPost,
+  generateBlogPost,
+  publishToWordPress,
+  postProductSpotlight,
+};

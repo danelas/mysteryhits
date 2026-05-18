@@ -8,7 +8,8 @@ const db = require("./db");
 const { handleWebhookVerification, handleWebhookEvent } = require("./webhook");
 const { uploadPost } = require("./instagram");
 const { generateContent } = require("./chat");
-const { startScheduler, generateAndPublishDailyPost, generateBlogPost, publishToWordPress } = require("./scheduler");
+const { startScheduler, generateAndPublishDailyPost, generateBlogPost, publishToWordPress, postProductSpotlight } = require("./scheduler");
+const { THEMED_PACKS, BUNDLES } = require("./products");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -148,6 +149,25 @@ app.get("/api/blog/history", async (_req, res) => {
     res.json({ success: true, history });
   } catch (err) {
     console.error("Blog history error:", err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ─── API: Product Catalog ───────────────────────────────────────────────────
+app.get("/api/products", (_req, res) => {
+  res.json({ themedPacks: THEMED_PACKS, bundles: BUNDLES });
+});
+
+// ─── API: Post a product spotlight to Instagram ─────────────────────────────
+// POST /api/products/spotlight  { slug?: "collector-bundle" | "mew" | ... }
+// Omit slug to post the auto-rotated product-of-the-week.
+app.post("/api/products/spotlight", async (req, res) => {
+  try {
+    const { slug } = req.body || {};
+    const result = await postProductSpotlight(slug);
+    res.json({ success: true, ...result });
+  } catch (err) {
+    console.error("Product spotlight error:", err.message);
     res.status(500).json({ error: err.message });
   }
 });
