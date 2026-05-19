@@ -92,6 +92,17 @@ const THEMED_PACKS = [
     productUrl: url("/pokemon/japanese-pack"),
     imageUrl: imageUrl("/images/packs/japanese-pack.jpg"),
   },
+  {
+    slug: "first-edition-pack",
+    character: "1st Edition",
+    tier: "limited-drop",
+    name: "1st Edition Mystery Pack (Limited Drop)",
+    price: "$79",
+    minimumValue: "1 holo + Light Play+",
+    subtitle: "Limited 2-week drop · 5 vintage 1st edition cards · 1 guaranteed holo · Light Play+ or better · ends 2026-06-02",
+    productUrl: url("/pokemon/first-edition-pack"),
+    imageUrl: imageUrl("/images/packs/first-edition-pack.jpg"),
+  },
 ];
 
 const BUNDLES = [
