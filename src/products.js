@@ -81,6 +81,17 @@ const THEMED_PACKS = [
     productUrl: url("/pokemon/gengar-79"),
     imageUrl: imageUrl("/images/packs/gengar-79.jpg"),
   },
+  {
+    slug: "japanese-pack",
+    character: "Japanese",
+    tier: "limited-drop",
+    name: "Japanese Mystery Pack (Limited Drop)",
+    price: "$79",
+    minimumValue: "$40+",
+    subtitle: "Limited 2-week drop · 100% Japanese cards · $40+ guaranteed value · ends 2026-06-01",
+    productUrl: url("/pokemon/japanese-pack"),
+    imageUrl: imageUrl("/images/packs/japanese-pack.jpg"),
+  },
 ];
 
 const BUNDLES = [
