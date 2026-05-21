@@ -2,6 +2,13 @@
 // Keep in sync with the store's src/data/themed-packs.ts and src/data/bundles.ts.
 // Edit this file when products are added, renamed, repriced, or retired —
 // every brand prompt and any product-spotlight posts read from here.
+//
+// IMPORTANT — Meta/Google ad-policy split:
+//   `subtitle` is the AD-SAFE one-liner (no dollar amounts) — used by
+//   caption / spotlight / writer prompts that may surface inside paid ads.
+//   `price` and `minimumValue` are kept on the data so the DM bot can
+//   answer "how much" questions, but those fields must NEVER be injected
+//   into ad / caption / spotlight copy.
 
 const STORE_BASE_URL = process.env.STORE_BASE_URL || "https://mysteryhitsfactory.com";
 const STORE_IMAGE_BASE_URL = process.env.STORE_IMAGE_BASE_URL || STORE_BASE_URL;
@@ -33,7 +40,7 @@ const THEMED_PACKS = [
     name: "Mew Elite Mystery Pack",
     price: "$79.99",
     minimumValue: "$40+",
-    subtitle: "Upgrade tier · $40+ guaranteed value · Holo or better guaranteed",
+    subtitle: "Upgrade tier · Guaranteed holo or better · Documented value floor",
     productUrl: url("/pokemon/mew-79"),
     imageUrl: imageUrl("/images/packs/mew-79.jpg"),
   },
@@ -55,7 +62,7 @@ const THEMED_PACKS = [
     name: "Charizard Elite Mystery Pack",
     price: "$79.99",
     minimumValue: "$40+",
-    subtitle: "Upgrade tier · $40+ guaranteed value · Holo or better guaranteed",
+    subtitle: "Upgrade tier · Guaranteed holo or better · Documented value floor",
     productUrl: url("/pokemon/charizard-79"),
     imageUrl: imageUrl("/images/packs/charizard-79.jpg"),
   },
@@ -77,7 +84,7 @@ const THEMED_PACKS = [
     name: "Gengar Elite Mystery Pack",
     price: "$79.99",
     minimumValue: "$40+",
-    subtitle: "Upgrade tier · $40+ guaranteed value · Holo or better guaranteed",
+    subtitle: "Upgrade tier · Guaranteed holo or better · Documented value floor",
     productUrl: url("/pokemon/gengar-79"),
     imageUrl: imageUrl("/images/packs/gengar-79.jpg"),
   },
@@ -88,7 +95,7 @@ const THEMED_PACKS = [
     name: "Japanese Mystery Pack (Limited Drop)",
     price: "$79",
     minimumValue: "$40+",
-    subtitle: "Limited 2-week drop · 100% Japanese cards · $40+ guaranteed value · ends 2026-06-01",
+    subtitle: "Limited 2-week drop · 100% Japanese cards · Holo guaranteed · Documented value floor",
     productUrl: url("/pokemon/japanese-pack"),
     imageUrl: imageUrl("/images/packs/japanese-pack.jpg"),
   },
@@ -99,7 +106,7 @@ const THEMED_PACKS = [
     name: "1st Edition Mystery Pack (Limited Drop)",
     price: "$250",
     minimumValue: "$160+",
-    subtitle: "Limited 2-week drop · 5 vintage 1st edition cards · 1 guaranteed 1st ed holo · Light Play+ or better · $160+ guaranteed value · ends 2026-06-02",
+    subtitle: "Limited 2-week drop · 5 vintage 1st edition cards · 1 guaranteed 1st ed holo · Light Play+ or better · Documented value floor",
     productUrl: url("/pokemon/first-edition-pack"),
     imageUrl: imageUrl("/images/packs/first-edition-pack.jpg"),
   },
@@ -112,7 +119,7 @@ const BUNDLES = [
     name: "Collector Bundle — Tier 1",
     price: "$79.99",
     minimumValue: "$55+",
-    subtitle: "Graded PSA 8–10 · Sealed booster · Rare raw hit · $55+ value",
+    subtitle: "Graded PSA 8–10 · Sealed booster · Rare raw hit · Documented value floor",
     contents: [
       "1 PSA-graded Pokémon card (PSA 8–10)",
       "1 sealed Pokémon booster pack",
@@ -127,7 +134,7 @@ const BUNDLES = [
     name: "Elite Bundle — Tier 2",
     price: "$199.99",
     minimumValue: "$140+",
-    subtitle: "PSA 8–10 · 3 sealed packs · Stronger raw hit · Possible JPN · $140+ value",
+    subtitle: "PSA 8–10 graded · 3 sealed packs · Stronger raw hit · Possible Japanese inclusion",
     contents: [
       "1 PSA-graded Pokémon card (PSA 8–10)",
       "3 sealed Pokémon booster packs",
@@ -143,7 +150,7 @@ const BUNDLES = [
     name: "Vault Bundle — Tier 3",
     price: "$499.99",
     minimumValue: "$350+",
-    subtitle: "Centerpiece slab · Premium sealed · High-end raw · Possible vintage sealed · $350+ value",
+    subtitle: "Centerpiece slab · Premium sealed · High-end raw · Possible vintage sealed",
     contents: [
       "Centerpiece graded Pokémon slab",
       "Premium sealed Pokémon product",
@@ -155,6 +162,9 @@ const BUNDLES = [
   },
 ];
 
+// Full catalog summary — INCLUDES pricing. Use for the DM bot (chat.js
+// generateReply) so it can answer "how much" questions. NEVER use for
+// caption / spotlight / writer prompts that surface in paid ads.
 function catalogSummary() {
   const themedLines = THEMED_PACKS.map(
     (p) =>
@@ -164,11 +174,31 @@ function catalogSummary() {
     (b) =>
       `- ${b.name} · ${b.price} · min ${b.minimumValue} value · ${b.subtitle} · ${b.productUrl}`
   ).join("\n");
-  return `CHARACTER-FOCUSED THEMED PACKS (each ships in a $29.99 standard tier and a $79.99 Elite tier)
+  return `CHARACTER-FOCUSED THEMED PACKS (Standard tier and Elite tier per character)
 ${themedLines}
 
 3-TIER MYSTERY BUNDLE LADDER (graded + sealed + raw mixes)
 ${bundleLines}`;
+}
+
+// Ad-safe catalog summary — NO dollar amounts. Use for writer / caption /
+// product-spotlight prompts so generated copy never embeds prices (Meta &
+// Google ad policies prohibit prices in ad text — prices must come from
+// the product feed).
+function catalogSummaryAdSafe() {
+  const themedLines = THEMED_PACKS.map(
+    (p) => `- ${p.name} · ${p.subtitle} · ${p.productUrl}`
+  ).join("\n");
+  const bundleLines = BUNDLES.map(
+    (b) => `- ${b.name} · ${b.subtitle} · ${b.productUrl}`
+  ).join("\n");
+  return `CHARACTER-FOCUSED THEMED PACKS (Standard tier and Elite tier per character)
+${themedLines}
+
+3-TIER MYSTERY BUNDLE LADDER (graded + sealed + raw mixes)
+${bundleLines}
+
+AD COPY RULE: Never include dollar amounts, prices, sale prices, or value-floor figures in captions or ad text. Refer to "documented value floor" or "value floor disclosed on product page" instead. Pricing lives on the product pages.`;
 }
 
 function pickProductOfTheWeek(date = new Date()) {
@@ -182,5 +212,6 @@ module.exports = {
   THEMED_PACKS,
   BUNDLES,
   catalogSummary,
+  catalogSummaryAdSafe,
   pickProductOfTheWeek,
 };

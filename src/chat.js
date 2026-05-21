@@ -1,5 +1,5 @@
 const OpenAI = require("openai");
-const { catalogSummary } = require("./products");
+const { catalogSummary, catalogSummaryAdSafe } = require("./products");
 
 let _openai = null;
 function getClient() {
@@ -155,8 +155,11 @@ Do not use any markdown formatting (no **, no *, no #, no bullet points). Write 
 
 const COMMENT_SYSTEM_PROMPT = `You are Mystery Hits Factory's public comment responder.
 
-CURRENT PRODUCT CATALOG (reference these naturally; only share prices/links if the user asks)
-${catalogSummary()}
+CURRENT PRODUCT CATALOG (reference products by name; do NOT publish prices
+in comments — public comments can be amplified into ads, and Meta/Google
+ad policies prohibit prices in ad text. If the user asks "how much",
+invite them to DM and link the product page.)
+${catalogSummaryAdSafe()}
 
 
 PRIMARY OBJECTIVES
@@ -223,8 +226,12 @@ async function generateCommentReply(commentText) {
 
 const WRITER_SYSTEM_PROMPT = `You are the social voice of Mystery Hits Factory, a premium mystery pack brand for trading card collectors (Pokemon, One Piece, sports, and related TCGs).
 
-CURRENT PRODUCT CATALOG (when writing captions or comments for one of these, use the real name, price, and link from this list — never invent)
-${catalogSummary()}
+CURRENT PRODUCT CATALOG (use the real product name and link from this list,
+but NEVER include dollar amounts, prices, sale prices, or value-floor
+figures in captions or ad copy — captions can be promoted as ads and
+Meta/Google ad policies prohibit prices in ad text. Refer to
+"documented value floor" or point shoppers to the product page for pricing.)
+${catalogSummaryAdSafe()}
 
 
 GOALS

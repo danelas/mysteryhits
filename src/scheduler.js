@@ -399,12 +399,11 @@ async function postProductSpotlight(productSlug) {
   const promptContext = `Write an Instagram caption (2-5 short lines + one CTA line) for this product:
 
 Name: ${product.name}
-Price: ${product.price}
-Minimum total card value: ${product.minimumValue}
 What's inside: ${product.subtitle}
 Link: ${product.productUrl}
 
-Tone: collector-to-collector, premium, no hype, no emojis. End with a clear CTA pointing to the link (or "link in bio").`;
+Tone: collector-to-collector, premium, no hype, no emojis.
+CRITICAL: Do NOT include any dollar amounts, prices, sale prices, or value-floor figures in the caption — captions may be promoted as ads and Meta/Google ad policies prohibit prices in ad text. Use phrases like "documented value floor" or "pricing on the product page" instead. End with a clear CTA pointing to the link (or "link in bio").`;
 
   const caption = await generateContent("caption", promptContext);
   console.log(`📸 Posting product spotlight: ${product.name}`);
