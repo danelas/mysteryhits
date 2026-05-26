@@ -29,6 +29,8 @@ const THEMED_PACKS = [
     name: "Mew Mystery Pack",
     price: "$29.99",
     minimumValue: "$20+",
+    typicalValue: "$25 – $35",
+    chaseValue: "$75 – $200+",
     subtitle: "Character-focused 5-card pull · Vintage to modern · Holo guaranteed",
     productUrl: url("/pokemon/mew"),
     imageUrl: imageUrl("/images/packs/mew.jpg"),
@@ -40,6 +42,8 @@ const THEMED_PACKS = [
     name: "Mew Elite Mystery Pack",
     price: "$79.99",
     minimumValue: "$60+",
+    typicalValue: "$70 – $95",
+    chaseValue: "$150 – $400+",
     subtitle: "Upgrade tier · Guaranteed holo or better · Documented value floor",
     productUrl: url("/pokemon/mew-79"),
     imageUrl: imageUrl("/images/packs/mew-79.jpg"),
@@ -51,6 +55,8 @@ const THEMED_PACKS = [
     name: "Charizard Mystery Pack",
     price: "$29.99",
     minimumValue: "$20+",
+    typicalValue: "$25 – $35",
+    chaseValue: "$100 – $300+",
     subtitle: "Character-focused 5-card pull · Vintage to modern · Holo guaranteed",
     productUrl: url("/pokemon/charizard"),
     imageUrl: imageUrl("/images/packs/charizard.jpg"),
@@ -62,6 +68,8 @@ const THEMED_PACKS = [
     name: "Charizard Elite Mystery Pack",
     price: "$79.99",
     minimumValue: "$60+",
+    typicalValue: "$70 – $95",
+    chaseValue: "$200 – $500+",
     subtitle: "Upgrade tier · Guaranteed holo or better · Documented value floor",
     productUrl: url("/pokemon/charizard-79"),
     imageUrl: imageUrl("/images/packs/charizard-79.jpg"),
@@ -73,6 +81,8 @@ const THEMED_PACKS = [
     name: "Gengar Mystery Pack",
     price: "$29.99",
     minimumValue: "$20+",
+    typicalValue: "$25 – $35",
+    chaseValue: "$75 – $250+",
     subtitle: "Character-focused 5-card pull · Vintage to modern · Holo guaranteed",
     productUrl: url("/pokemon/gengar"),
     imageUrl: imageUrl("/images/packs/gengar.jpg"),
@@ -84,6 +94,8 @@ const THEMED_PACKS = [
     name: "Gengar Elite Mystery Pack",
     price: "$79.99",
     minimumValue: "$60+",
+    typicalValue: "$70 – $95",
+    chaseValue: "$150 – $400+",
     subtitle: "Upgrade tier · Guaranteed holo or better · Documented value floor",
     productUrl: url("/pokemon/gengar-79"),
     imageUrl: imageUrl("/images/packs/gengar-79.jpg"),
@@ -95,6 +107,8 @@ const THEMED_PACKS = [
     name: "Japanese Mystery Pack (Limited Drop)",
     price: "$79",
     minimumValue: "$60+",
+    typicalValue: "$70 – $90",
+    chaseValue: "$150 – $350+",
     subtitle: "Limited 2-week drop · 100% Japanese cards · Holo guaranteed · Documented value floor",
     productUrl: url("/pokemon/japanese-pack"),
     imageUrl: imageUrl("/images/packs/japanese-pack.jpg"),
@@ -106,6 +120,8 @@ const THEMED_PACKS = [
     name: "1st Edition Mystery Pack (Limited Drop)",
     price: "$250",
     minimumValue: "$190+",
+    typicalValue: "$220 – $300",
+    chaseValue: "$500 – $1,000+",
     subtitle: "Limited 2-week drop · 5 vintage 1st edition cards · 1 guaranteed 1st ed holo · Light Play+ or better · Documented value floor",
     productUrl: url("/pokemon/first-edition-pack"),
     imageUrl: imageUrl("/images/packs/first-edition-pack.jpg"),
@@ -119,6 +135,8 @@ const BUNDLES = [
     name: "Collector Bundle — Tier 1",
     price: "$79.99",
     minimumValue: "$65+",
+    typicalValue: "$75 – $95",
+    chaseValue: "$150 – $300+",
     subtitle: "Graded PSA 8–10 · Sealed booster · Rare raw hit · Documented value floor",
     contents: [
       "1 PSA-graded Pokémon card (PSA 8–10)",
@@ -134,6 +152,8 @@ const BUNDLES = [
     name: "Elite Bundle — Tier 2",
     price: "$199.99",
     minimumValue: "$165+",
+    typicalValue: "$185 – $230",
+    chaseValue: "$350 – $750+",
     subtitle: "PSA 8–10 graded · 3 sealed packs · Stronger raw hit · Possible Japanese inclusion",
     contents: [
       "1 PSA-graded Pokémon card (PSA 8–10)",
@@ -150,6 +170,8 @@ const BUNDLES = [
     name: "Vault Bundle — Tier 3",
     price: "$499.99",
     minimumValue: "$400+",
+    typicalValue: "$450 – $575",
+    chaseValue: "$800 – $1,500+",
     subtitle: "Centerpiece slab · Premium sealed · High-end raw · Possible vintage sealed",
     contents: [
       "Centerpiece graded Pokémon slab",
@@ -168,17 +190,23 @@ const BUNDLES = [
 function catalogSummary() {
   const themedLines = THEMED_PACKS.map(
     (p) =>
-      `- ${p.name} · ${p.price} · min ${p.minimumValue} value · ${p.productUrl}`
+      `- ${p.name} · ${p.price} · floor ${p.minimumValue}, typical ${p.typicalValue}, chase ${p.chaseValue} · ${p.productUrl}`
   ).join("\n");
   const bundleLines = BUNDLES.map(
     (b) =>
-      `- ${b.name} · ${b.price} · min ${b.minimumValue} value · ${b.subtitle} · ${b.productUrl}`
+      `- ${b.name} · ${b.price} · floor ${b.minimumValue}, typical ${b.typicalValue}, chase ${b.chaseValue} · ${b.subtitle} · ${b.productUrl}`
   ).join("\n");
   return `CHARACTER-FOCUSED THEMED PACKS (Standard tier and Elite tier per character)
 ${themedLines}
 
 3-TIER MYSTERY BUNDLE LADDER (graded + sealed + raw mixes)
-${bundleLines}`;
+${bundleLines}
+
+VALUE FRAMING (use when a customer asks "how much do I get"):
+- "Floor" = the documented minimum total card value every pack/bundle clears
+- "Typical" = what most buyers actually receive
+- "Chase" = the top-end value when the rare hit lands
+Be honest that variance exists — never imply chase is the typical outcome.`;
 }
 
 // Ad-safe catalog summary — NO dollar amounts. Use for writer / caption /
